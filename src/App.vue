@@ -123,7 +123,55 @@ export default {
         "IV.data": dataObj.ivData,
       };
     },
+    ///////////////////////////////////////
+    /* Handles websocket data */
+    aggregateUpdateData(trade) {
+      if (trade.exchange === this.selectedExchange && trade.pair === this.selectedPair.replace(/-/g, '')) {
+        if (!updateDataMap.has(trade.type)) updateDataMap.set(trade.type, [])
+        const dataArr = updateDataMap.get(trade.type)
 
+        switch (trade.type) {
+          case 'ohlcv':
+            if (this.loadOhlcvSuccess) {
+              document.title = trade.price + ' ' + trade.pair
+              dataArr.push([trade.timestamp, trade.price, trade.volume])
+            }
+            break
+
+          case 'oi':
+            if (this.selectedPairType == 'futures' && this.loadOiSuccess) {
+              dataArr.push([trade.timestamp, trade.openInterest])
+            }
+            break
+
+          case 'funding':
+            if (this.selectedPairType == 'futures' && this.selectedTimeframe != '10s' && this.loadFundingSuccess) {
+              dataArr.push([trade.timestamp, trade.funding])
+            }
+            break
+
+          case 'liq':
+            if (this.selectedPairType == 'futures' && this.loadLiqsSuccess) {
+              dataArr.push([trade.timestamp, trade.qty, trade.side])
+            }
+            break
+
+          default:
+            break
+        }
+
+        let durationUnit = this.selectedTimeframe.slice(this.selectedTimeframe.length - 1) // Eg: 'm'
+        let timeOriginalUnit = parseInt(this.selectedTimeframe.slice(0, -1)) // Eg: 1
+
+        const currentTimestamp = moment()
+          .add(timeOriginalUnit * 5, durationUnit)
+          .valueOf()
+        //when tab is hidden and visible again,browser will accumulate all range-change event and try to execute all of them at once ...
+        //requestAnimationFrame(() => {this.$refs.tradingVue.goto(currentTimestamp);});
+        this.loading = false
+        //requestAnimationFrame(this.aggregateUpdateData);
+      }
+    },
     /*       getSomething(URL){
         axios.get(URL + '/fetchOhlc', {
           params: {
